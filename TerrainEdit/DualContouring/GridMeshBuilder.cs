@@ -9,9 +9,17 @@ namespace TerrainEdit.DualContouring
         List<int> tris;
         public GridMeshBuilder(int xsize, int ysize, int zsize, IDataProvider provider)
         {
-            cube = new CubeGrid(xsize, ysize, zsize, provider);
+            cube = new CubeGrid(xsize, ysize, zsize);
+            cube.PopulateGrid(provider);
             verts = new List<Vector3>();
             tris = new List<int>();
+        }
+        public GridMeshBuilder(CubeGrid cube, IDataProvider provider)
+        {
+            verts = new List<Vector3>();
+            tris = new List<int>();
+            this.cube = cube;
+            cube.PopulateGrid(provider);
         }
         void AddMesh(Vector3 a1, Vector3 a2, Vector3 b1, Vector3 b2)
         {
@@ -32,6 +40,7 @@ namespace TerrainEdit.DualContouring
         void AddMesh(Cube a1, Cube a2, Cube b1, Cube b2)
         {
             var count = verts.Count;
+            var tricount = tris.Count;
             if (a1.CurVertIndex == -1)
             {
                 a1.CurVertIndex = count++;
@@ -56,6 +65,7 @@ namespace TerrainEdit.DualContouring
                 verts.Add(b2.VertexPoint - new Vector3(1, 1, 1) / 2f);
 
             }
+
             tris.Add(a1.CurVertIndex);
             tris.Add(a2.CurVertIndex);
             tris.Add(b1.CurVertIndex);
@@ -96,6 +106,11 @@ namespace TerrainEdit.DualContouring
         {
             mesh.vertices = verts.ToArray();
             mesh.triangles = tris.ToArray();
+            mesh.RecalculateNormals(cube);
+            verts.Clear();
+            tris.Clear();
+            cube = null;
+            
         }
     }
 }

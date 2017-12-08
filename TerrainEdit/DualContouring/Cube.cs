@@ -6,6 +6,7 @@ namespace TerrainEdit.DualContouring
 {
     public class CubeGrid
     {
+        public const bool MAKE_CUBIC = false;
         public Cube[] Cubes;
         public Edge[] Edges;
         public Dictionary<Vector3, int> edgeindex;
@@ -60,9 +61,8 @@ namespace TerrainEdit.DualContouring
             output.x = ((index - (int)output.z - (zsize ) * (int)output.y) / ((ysize ) * (zsize )));
             return output;
         }
-        public CubeGrid(int xsize, int ysize, int zsize,IDataProvider provider)
+        public CubeGrid(int xsize, int ysize, int zsize)
         {
-            edgeindex = new Dictionary<Vector3,int>();
             Points = new ValuePoint[xsize * ysize * zsize];
             Edges = new Edge[((zsize - 1) * ysize + (ysize - 1) * zsize) * xsize + (xsize - 1) * zsize * ysize];
             Cubes = new Cube[(xsize - 1) * (zsize - 1) * (ysize - 1)];
@@ -78,7 +78,7 @@ namespace TerrainEdit.DualContouring
                     {
                         var h = new Vector3(x,y,z);
                         int ind = z + y * zsize + x * (zsize * ysize);
-                        Points[ind] = new ValuePoint(this,ind, provider.GetDistanceValue(h));                        
+                        Points[ind] = new ValuePoint(this,ind, -1f);                        
                     }
                 }
             }
@@ -111,32 +111,55 @@ namespace TerrainEdit.DualContouring
                         {
                             //edgeindex.Add((Points[curpos].Point + Points[curpos + zoffset].Point) / 2, edgecounter);
                             //Debug.Log((Points[curpos].Point + Points[curpos + zoffset].Point) / 2);
-                            Edges[edgecounter++] = new Edge(this, curpos, curpos + zoffset).AddToNeighboringCubes(x,y,z,edgecounter-1,Edge.EdgeDirection.Z).CalculateInterpolationPoint();
+                            Edges[edgecounter++] = new Edge(this, curpos, curpos + zoffset);//.CalculateInterpolationPoint();
+                            Edges[edgecounter - 1].AddToNeighboringCubes(x, y, z, edgecounter - 1, Edge.EdgeDirection.Z);
                         }
 
                         if (y != ysize - 1)
                         {
                             //edgeindex.Add((Points[curpos].Point + Points[curpos + yoffset].Point) / 2, edgecounter);
                             //Debug.Log((Points[curpos].Point + Points[curpos + yoffset].Point) / 2);
-                            Edges[edgecounter++] = new Edge(this, curpos, curpos + yoffset).AddToNeighboringCubes(x, y, z, edgecounter - 1, Edge.EdgeDirection.Y).CalculateInterpolationPoint();
+                            Edges[edgecounter++] = new Edge(this, curpos, curpos + yoffset);//.CalculateInterpolationPoint();
+                            Edges[edgecounter - 1].AddToNeighboringCubes(x, y, z, edgecounter - 1, Edge.EdgeDirection.Y);
                         }
 
                         if (x != xsize - 1)
                         {
                             //edgeindex.Add((Points[curpos].Point + Points[curpos + xoffset].Point) / 2, edgecounter);
                             //Debug.Log((Points[curpos].Point + Points[curpos + xoffset].Point) / 2);
-                            Edges[edgecounter++] = new Edge(this, curpos, curpos + xoffset).AddToNeighboringCubes(x, y, z, edgecounter - 1, Edge.EdgeDirection.X).CalculateInterpolationPoint(); 
+                            Edges[edgecounter++] = new Edge(this, curpos, curpos + xoffset);//.CalculateInterpolationPoint(); 
+                            Edges[edgecounter - 1].AddToNeighboringCubes(x, y, z, edgecounter - 1, Edge.EdgeDirection.X);
                         }
                     }
                 }
             }
-            //Debug.Log(h);
+            // I don't know why I need to do this after the edges are finished, it has something to do with the order they're placed in the cubes edge list and frankly I don't want to mess with it
             foreach (Cube c in Cubes)
             {
-                c.CalculateVertexPoint();
+                c.AddToEdges();
             }
 
+
             
+        }
+        public void PopulateGrid(IDataProvider provider)
+        {
+
+
+            foreach (ValuePoint p in Points)
+            {
+                p.Value = provider.GetDistanceValue(p.Point);
+            }
+            foreach (Edge edge in Edges)
+            {
+                edge.Reset();
+                edge.CalculateInterpolationPoint();
+            }
+            foreach (Cube c in Cubes)
+            {
+                c.Reset();
+                c.CalculateVertexPoint();
+            }
         }
     }
     public class Cube 
@@ -163,29 +186,46 @@ namespace TerrainEdit.DualContouring
             this.grid = grid;
             Index = index;
         }
+        public void Reset()
+        {
+            signChange = false;
+            
+            CurVertIndex = -1;
+            VertexPoint = Vector3.zero;
+        }
         public void CalculateVertexPoint()
         {
             int i =0;
-            
-            int myid = Index;
+
             for (int h = 0; h < curedgeindex;h++ )
             {
                 int edge = Edges[h];
-                grid.Edges[edge].cubes.Add(myid);
                 if (grid.Edges[edge].signChange)
                 {
                     signChange = true;
-
+                    if (!CubeGrid.MAKE_CUBIC)
+                    {
+                        i++;
+                        VertexPoint += grid.Edges[edge].interpolationPoint;
+                    }
                 }
-                i++;
+                if (CubeGrid.MAKE_CUBIC)
+                {
+                    i++;
+                    VertexPoint += grid.Edges[edge].interpolationPoint;
+                }
 
-                VertexPoint += grid.Edges[edge].interpolationPoint;
 
             }
             VertexPoint /= i;
 
         }
-
+        public void AddToEdges(){
+            for(int h = 0;h<curedgeindex;h++){
+                grid.Edges[Edges[h]].cubes.Add(Index);
+            }
+        }
+       
     }
     public class Edge
     {
@@ -201,6 +241,12 @@ namespace TerrainEdit.DualContouring
             this.cube = cube;
             pointA = pointa;
             pointB = pointb;
+
+        }
+        public void Reset()
+        {
+            reverse = default(bool);
+            signChange = false;
         }
         public Edge AddToNeighboringCubes(int x, int y, int z,int edgeindex,EdgeDirection dir)
         {
@@ -209,8 +255,12 @@ namespace TerrainEdit.DualContouring
                 case EdgeDirection.X:
                     
                     Vector3 curpos = cube.GetPointCoords(pointA);
-                    if(y!=cube.ysize-1&&z!=cube.zsize-1)
-                    cube.Cubes[cube.GetCubeIndex((int)curpos.x, (int)curpos.y, (int)curpos.z)].Edges[cube.Cubes[cube.GetCubeIndex((int)curpos.x, (int)curpos.y, (int)curpos.z)].curedgeindex++] = edgeindex;
+                    if (y != cube.ysize - 1 && z != cube.zsize - 1)
+                    {
+                        var index = cube.GetCubeIndex((int)curpos.x, (int)curpos.y, (int)curpos.z);
+                        cube.Cubes[index].Edges[cube.Cubes[index].curedgeindex++] = edgeindex;
+
+                    }
                     if (curpos.y > 0 && z != cube.zsize - 1)
                     cube.Cubes[cube.GetCubeIndex((int)curpos.x, (int)curpos.y-1, (int)curpos.z)].Edges[cube.Cubes[cube.GetCubeIndex((int)curpos.x, (int)curpos.y-1, (int)curpos.z)].curedgeindex++] = edgeindex;
                     if (curpos.z > 0 && y != cube.ysize - 1)
@@ -256,7 +306,7 @@ namespace TerrainEdit.DualContouring
             if (Mathf.Sign(a) != Mathf.Sign(b))
             {
                 signChange = true;
-                t = .5f;// -a / (b - a);
+                t = CubeGrid.MAKE_CUBIC?0.5f:(-a / (b - a));
                 
                 if (Mathf.Sign(b) > Mathf.Sign(a))
                 {
