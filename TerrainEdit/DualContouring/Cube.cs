@@ -9,7 +9,7 @@ namespace TerrainEdit.DualContouring
         public const bool MAKE_CUBIC = false;
         public Cube[] Cubes;
         public Edge[] Edges;
-        public Dictionary<Vector3, int> edgeindex;
+       
         public ValuePoint[] Points;
         public int xsize;
         public int ysize;
@@ -30,20 +30,7 @@ namespace TerrainEdit.DualContouring
             }
             return z + y * zsize + x + zsize * ysize;
         }
-        public static readonly Vector3[] EdgeOffsets = new Vector3[12]{
-            (Vector3.forward-Vector3.up)/2f,
-            (-Vector3.forward-Vector3.up)/2f,
-            (Vector3.right-Vector3.up)/2f,
-            (-Vector3.right-Vector3.up)/2f,
-            (Vector3.forward+Vector3.up)/2f,
-            (-Vector3.forward+Vector3.up)/2f,
-            (Vector3.right+Vector3.up)/2f,
-            (-Vector3.right+Vector3.up)/2f,
-            (Vector3.forward+Vector3.right)/2f,
-            (-Vector3.forward+Vector3.right)/2f,
-            (Vector3.forward-Vector3.right)/2f,
-            (-Vector3.forward-Vector3.right)/2f,
-        };
+
         public Vector3 GetCubeCoords(int index)
         {
             Vector3 output = Vector3.zero;
@@ -148,7 +135,10 @@ namespace TerrainEdit.DualContouring
 
             foreach (ValuePoint p in Points)
             {
+                p.Material = provider.GetMaterialValue(p.Point);
                 p.Value = provider.GetDistanceValue(p.Point);
+                p.Value = p.Material == 0 ? -1 : (p.Value == -1 ? 1 : p.Value);
+                
             }
             foreach (Edge edge in Edges)
             {
@@ -180,6 +170,7 @@ namespace TerrainEdit.DualContouring
         public Vector3 VertexPoint;
         public bool signChange=false;
         public int Index;
+        
         public int CurVertIndex = -1;
         public Cube(CubeGrid grid, int index)
         {
@@ -189,8 +180,8 @@ namespace TerrainEdit.DualContouring
         public void Reset()
         {
             signChange = false;
-            
             CurVertIndex = -1;
+
             VertexPoint = Vector3.zero;
         }
         public void CalculateVertexPoint()
@@ -209,6 +200,7 @@ namespace TerrainEdit.DualContouring
                         VertexPoint += grid.Edges[edge].interpolationPoint;
                     }
                 }
+
                 if (CubeGrid.MAKE_CUBIC)
                 {
                     i++;
@@ -231,11 +223,16 @@ namespace TerrainEdit.DualContouring
     {
         public CubeGrid cube;
         public int pointA;
+        public int Index;
         public int pointB;
         public Vector3 interpolationPoint;
         public bool signChange = false;
         public List<int> cubes = new List<int>();
         public bool reverse;
+        public Vector3 CatmullFacePoint;
+        public Vector3 CatmullEdgePoint;
+        public EdgeDirection Direction;
+
         public Edge(CubeGrid cube, int pointa, int pointb)
         {
             this.cube = cube;
@@ -250,6 +247,8 @@ namespace TerrainEdit.DualContouring
         }
         public Edge AddToNeighboringCubes(int x, int y, int z,int edgeindex,EdgeDirection dir)
         {
+            Index = edgeindex;
+            Direction = dir;
             switch (dir)
             {
                 case EdgeDirection.X:
@@ -303,6 +302,7 @@ namespace TerrainEdit.DualContouring
             float a = cube.Points[pointA].Value;
             var pointa = cube.Points[pointA].Point;
             var pointb = cube.Points[pointB].Point;
+
             if (Mathf.Sign(a) != Mathf.Sign(b))
             {
                 signChange = true;
@@ -322,7 +322,7 @@ namespace TerrainEdit.DualContouring
             {
                 t = .5f;
             }
-
+            
             interpolationPoint = pointa * (1 - t) + (pointb * t);
             return this;
         }
@@ -338,6 +338,7 @@ namespace TerrainEdit.DualContouring
         public CubeGrid grid;
         public int Index;
         public float Value;
+        public byte Material;
         public Vector3 Point
         {
             get

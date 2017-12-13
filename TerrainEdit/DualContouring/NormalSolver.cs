@@ -29,7 +29,7 @@ namespace TerrainEdit.DualContouring {
         ///     The smoothing angle. Note that triangles that already share
         ///     the same vertex will be smooth regardless of the angle! 
         /// </param>
-        public static void RecalculateNormals(this Mesh mesh, CubeGrid cube)
+        public static void RecalculateNormals(this Mesh mesh,CubeGrid grid)
         {
             var normals = new Vector3[mesh.vertices.Length];
             for (int tri = 0; tri < mesh.triangles.Length; tri += 3)
