@@ -9,8 +9,6 @@ namespace TerrainEdit.DualContouring
         public const bool MAKE_CUBIC = false;
         public Cube[] Cubes;
         public Edge[] Edges;
-       
-        public ValuePoint[] Points;
         public int xsize;
         public int ysize;
         public int zsize;
@@ -50,25 +48,12 @@ namespace TerrainEdit.DualContouring
         }
         public CubeGrid(int xsize, int ysize, int zsize)
         {
-            Points = new ValuePoint[xsize * ysize * zsize];
             Edges = new Edge[((zsize - 1) * ysize + (ysize - 1) * zsize) * xsize + (xsize - 1) * zsize * ysize];
             Cubes = new Cube[(xsize - 1) * (zsize - 1) * (ysize - 1)];
             this.xsize = xsize;
             this.ysize = ysize;
             this.zsize = zsize;
             int edgecounter = 0;
-            for(int x = 0;x<xsize;x++)
-            {
-                for(int y = 0;y<ysize;y++)
-                {
-                    for(int z = 0;z<zsize;z++)
-                    {
-                        var h = new Vector3(x,y,z);
-                        int ind = z + y * zsize + x * (zsize * ysize);
-                        Points[ind] = new ValuePoint(this,ind, -1f);                        
-                    }
-                }
-            }
             Vector3 offset = new Vector3(1f, 1f, 1f) / 2;
             for (int x = 0; x < xsize - 1; x++)
             {
@@ -129,28 +114,7 @@ namespace TerrainEdit.DualContouring
 
             
         }
-        public void PopulateGrid(IDataProvider provider)
-        {
 
-
-            foreach (ValuePoint p in Points)
-            {
-                p.Material = provider.GetMaterialValue(p.Point);
-                p.Value = provider.GetDistanceValue(p.Point);
-                p.Value = p.Material == 0 ? -1 : (p.Value == -1 ? 1 : p.Value);
-                
-            }
-            foreach (Edge edge in Edges)
-            {
-                edge.Reset();
-                edge.CalculateInterpolationPoint();
-            }
-            foreach (Cube c in Cubes)
-            {
-                c.Reset();
-                c.CalculateVertexPoint();
-            }
-        }
     }
     public class Cube 
     {
@@ -167,50 +131,50 @@ namespace TerrainEdit.DualContouring
         public int[] Edges;
         public byte curedgeindex;
         public CubeGrid grid;
-        public Vector3 VertexPoint;
-        public bool signChange=false;
         public int Index;
         
-        public int CurVertIndex = -1;
         public Cube(CubeGrid grid, int index)
         {
             this.grid = grid;
             Index = index;
         }
-        public void Reset()
-        {
-            signChange = false;
-            CurVertIndex = -1;
-
-            VertexPoint = Vector3.zero;
-        }
-        public void CalculateVertexPoint()
+        public CubeData CalculateVertexPoint(ref EdgeData[] edgedatas)
         {
             int i =0;
-
+            Vector3 VertexPoint= Vector3.zero;
+            bool signChange=false;
             for (int h = 0; h < curedgeindex;h++ )
             {
                 int edge = Edges[h];
-                if (grid.Edges[edge].signChange)
+                if (edgedatas[edge].signChange)
                 {
                     signChange = true;
                     if (!CubeGrid.MAKE_CUBIC)
                     {
                         i++;
-                        VertexPoint += grid.Edges[edge].interpolationPoint;
+                        VertexPoint += edgedatas[edge].interpolationPoint;
                     }
                 }
 
                 if (CubeGrid.MAKE_CUBIC)
                 {
                     i++;
-                    VertexPoint += grid.Edges[edge].interpolationPoint;
+                    VertexPoint += edgedatas[edge].interpolationPoint;
                 }
 
 
             }
             VertexPoint /= i;
+            return new CubeData(VertexPoint, signChange);
 
+        }
+        public Vector3 VertexPoint(CubeGridData dat)
+        {
+            return dat.CubeData[Index].VertexPoint;
+        }
+        public int CurVertIndex(CubeGridData dat)
+        {
+            return dat.CubeVertIndexes[Index];
         }
         public void AddToEdges(){
             for(int h = 0;h<curedgeindex;h++){
@@ -225,12 +189,7 @@ namespace TerrainEdit.DualContouring
         public int pointA;
         public int Index;
         public int pointB;
-        public Vector3 interpolationPoint;
-        public bool signChange = false;
         public List<int> cubes = new List<int>();
-        public bool reverse;
-        public Vector3 CatmullFacePoint;
-        public Vector3 CatmullEdgePoint;
         public EdgeDirection Direction;
 
         public Edge(CubeGrid cube, int pointa, int pointb)
@@ -240,11 +199,7 @@ namespace TerrainEdit.DualContouring
             pointB = pointb;
 
         }
-        public void Reset()
-        {
-            reverse = default(bool);
-            signChange = false;
-        }
+
         public Edge AddToNeighboringCubes(int x, int y, int z,int edgeindex,EdgeDirection dir)
         {
             Index = edgeindex;
@@ -294,15 +249,18 @@ namespace TerrainEdit.DualContouring
             }
             return this;
         }
-        public Edge CalculateInterpolationPoint()
+        
+        public EdgeData CalculateInterpolationPoint(IDataProvider data)
         {
             
             float t = 0f;
-            float b = cube.Points[pointB].Value;
-            float a = cube.Points[pointA].Value;
-            var pointa = cube.Points[pointA].Point;
-            var pointb = cube.Points[pointB].Point;
+            var pointa = cube.GetPointCoords(pointA);
+            var pointb = cube.GetPointCoords(pointB);
+            float b = data.GetDistanceValue(pointb);
+            float a = data.GetDistanceValue(pointa);
 
+            bool signChange = false;
+            bool reverse = false;
             if (Mathf.Sign(a) != Mathf.Sign(b))
             {
                 signChange = true;
@@ -322,9 +280,9 @@ namespace TerrainEdit.DualContouring
             {
                 t = .5f;
             }
+
+            return new EdgeData(pointa * (1 - t) + (pointb * t), reverse, signChange);
             
-            interpolationPoint = pointa * (1 - t) + (pointb * t);
-            return this;
         }
         public enum EdgeDirection
         {
@@ -333,7 +291,28 @@ namespace TerrainEdit.DualContouring
             Z
         }
     }
-    public class ValuePoint
+    public struct EdgeData
+    {
+        public Vector3 interpolationPoint{get; private set;}
+        public bool reverse { get; private set; }
+        public bool signChange { get; private set; }
+        public EdgeData(Vector3 interpoint, bool rev, bool signchange){
+            interpolationPoint=interpoint;
+            reverse = rev;
+            signChange = signchange;
+        }
+    }
+    public struct CubeData
+    {
+        public Vector3 VertexPoint { get; private set; }
+        public bool signChange { get; private set; }
+        public CubeData(Vector3 vertpoint, bool signchange)
+        {
+            VertexPoint = vertpoint;
+            signChange = signchange;
+        }
+    }
+    /*public class ValuePoint
     {
         public CubeGrid grid;
         public int Index;
@@ -353,5 +332,5 @@ namespace TerrainEdit.DualContouring
             Value = value;
         }
         public ValuePoint() { }
-    }
+    }*/
 }

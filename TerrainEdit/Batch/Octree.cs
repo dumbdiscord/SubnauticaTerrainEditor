@@ -110,6 +110,7 @@ namespace TerrainEdit.BatchTools
         public NodeData GetLeafNodeDataAt(Vector3 val)
         {
             if(IsLeafNode) return Data;
+            if (Data.Distance == 0) return Data;
             byte corneroffset = 0;
             if (val.z > 0)
             {

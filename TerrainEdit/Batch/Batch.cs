@@ -95,9 +95,13 @@ namespace TerrainEdit.BatchTools{
         public float GetDistanceValue(Vector3 val)
         {
             var data = batch.GetDataAtPosition(val+offset-new Vector3(2,2,2));
-            var h = (data.Distance - 126) / 126f;
+            var h = GetRealDistance(data.Material,(data.Distance - 126) / 126f);
 
             return  h;
+        }
+        float GetRealDistance(byte Material, float dist)
+        {
+            return Material == 0 ? -1 : (dist == -1 ? 1 :dist);
         }
         public byte GetMaterialValue(Vector3 val)
         {
