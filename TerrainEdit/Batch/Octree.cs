@@ -43,11 +43,15 @@ namespace TerrainEdit.BatchTools
                 {
                     if (IsRootNode)
                     {
-                        return Vector3.up;
+                        return Vector3.zero;
                     }
                     pos= ParentNode.GetChildPosition(this);
                 }
                 return pos;
+            }
+            set
+            {
+                pos = value;
             }
         }
         public virtual float Size{
@@ -63,6 +67,10 @@ namespace TerrainEdit.BatchTools
                     
                 }
                 return size;
+            }
+            set
+            {
+                size = value;
             }
         }
         public Vector3 GetChildPosition(Octree tree)
@@ -97,7 +105,6 @@ namespace TerrainEdit.BatchTools
                 {
                     var child = Octree.CreateFromProtoData(ref Nodes,cindex+i);
                     child.ParentNode = tree;
-                    
                     tree.Children[i] = child;
                 }
                 

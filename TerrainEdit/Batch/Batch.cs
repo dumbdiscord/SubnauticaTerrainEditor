@@ -101,7 +101,7 @@ namespace TerrainEdit.BatchTools{
         }
         float GetRealDistance(byte Material, float dist)
         {
-            return Material == 0 ? -1 : (dist == -1 ? 1 :dist);
+            return Material == 0 ? -1 : (dist == -1 ? 1 : dist);
         }
         public byte GetMaterialValue(Vector3 val)
         {

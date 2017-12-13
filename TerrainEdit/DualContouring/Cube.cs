@@ -138,7 +138,7 @@ namespace TerrainEdit.DualContouring
             this.grid = grid;
             Index = index;
         }
-        public CubeData CalculateVertexPoint(ref EdgeData[] edgedatas)
+        public void CalculateVertexPoint(ref EdgeData[] edgedatas,ref CubeData dat)
         {
             int i =0;
             Vector3 VertexPoint= Vector3.zero;
@@ -165,7 +165,8 @@ namespace TerrainEdit.DualContouring
 
             }
             VertexPoint /= i;
-            return new CubeData(VertexPoint, signChange);
+            dat.VertexPoint = VertexPoint;
+            dat.signChange = signChange;
 
         }
         public Vector3 VertexPoint(CubeGridData dat)
@@ -250,7 +251,7 @@ namespace TerrainEdit.DualContouring
             return this;
         }
         
-        public EdgeData CalculateInterpolationPoint(IDataProvider data)
+        public void CalculateInterpolationPoint(IDataProvider data,ref EdgeData dat)
         {
             
             float t = 0f;
@@ -280,8 +281,9 @@ namespace TerrainEdit.DualContouring
             {
                 t = .5f;
             }
-
-            return new EdgeData(pointa * (1 - t) + (pointb * t), reverse, signChange);
+            dat.reverse=reverse;
+            dat.signChange=signChange;
+            dat.interpolationPoint=(pointa * (1 - t) + (pointb * t));
             
         }
         public enum EdgeDirection
@@ -293,9 +295,9 @@ namespace TerrainEdit.DualContouring
     }
     public struct EdgeData
     {
-        public Vector3 interpolationPoint{get; private set;}
-        public bool reverse { get; private set; }
-        public bool signChange { get; private set; }
+        public Vector3 interpolationPoint{get; set;}
+        public bool reverse { get; set; }
+        public bool signChange { get; set; }
         public EdgeData(Vector3 interpoint, bool rev, bool signchange){
             interpolationPoint=interpoint;
             reverse = rev;
@@ -304,8 +306,8 @@ namespace TerrainEdit.DualContouring
     }
     public struct CubeData
     {
-        public Vector3 VertexPoint { get; private set; }
-        public bool signChange { get; private set; }
+        public Vector3 VertexPoint { get; set; }
+        public bool signChange { get; set; }
         public CubeData(Vector3 vertpoint, bool signchange)
         {
             VertexPoint = vertpoint;

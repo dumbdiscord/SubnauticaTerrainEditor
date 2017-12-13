@@ -23,8 +23,8 @@ namespace TerrainEdit.DualContouring
             var v = val-new Vector3(0,0,0)+offset;
             float rad = 50;
             //return v.x < rad || v.y < rad || v.z < rad ? 1 : -1;
-            return rad - (v).magnitude;
-           // return (1 - 2 * (get(val)));//Mathf.Max((7 - (val + new Vector3(-8f, -8f, -8f)).magnitude),(7 - (val + new Vector3(-12f, -12f, -12f)).magnitude));
+            //return rad - (v).magnitude;
+            return (1 - 2 * (get(val)));//Mathf.Max((7 - (val + new Vector3(-8f, -8f, -8f)).magnitude),(7 - (val + new Vector3(-12f, -12f, -12f)).magnitude));
         }
         // A bunch of inefficient stuff used for testing
         public float Adder(Vector3 val)

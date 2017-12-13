@@ -8,6 +8,7 @@ namespace TerrainEdit.DualContouring
 {
     public class GridMeshBuilder
     {
+        
         //CubeGrid cube;
         CubeGridData cubedata;
         List<Vector3> verts;
@@ -81,12 +82,12 @@ namespace TerrainEdit.DualContouring
 
             }
 
-            tris.Add(a1.CurVertIndex(cubedata));
-            tris.Add(a2.CurVertIndex(cubedata));
-            tris.Add(b1.CurVertIndex(cubedata));
-            tris.Add(a2.CurVertIndex(cubedata));
-            tris.Add(b2.CurVertIndex(cubedata));
-            tris.Add(b1.CurVertIndex(cubedata));
+            tris.Add(a1.CurVertIndex(cubedata)-1);
+            tris.Add(a2.CurVertIndex(cubedata)-1);
+            tris.Add(b1.CurVertIndex(cubedata)-1);
+            tris.Add(a2.CurVertIndex(cubedata)-1);
+            tris.Add(b2.CurVertIndex(cubedata)-1);
+            tris.Add(b1.CurVertIndex(cubedata)-1);
 
         }
         void AssignVerts(Cube c1, Cube c2, Cube c3, Cube c4)
@@ -131,6 +132,7 @@ namespace TerrainEdit.DualContouring
             verts.Clear();
             tris.Clear();
             var cube = cubedata.CubeGrid;
+            Profiler.BeginSample("Dual Contour Quad Calculation");
             foreach (var edges in cube.Edges)
             {
                 var edge = cubedata.EdgeData[edges.Index];
@@ -155,6 +157,7 @@ namespace TerrainEdit.DualContouring
 
 
             }
+            Profiler.EndSample();
         }
         public void CatmullClark()
         {
@@ -284,6 +287,8 @@ namespace TerrainEdit.DualContouring
         public int[] ExtraCatmullVerts;
         public Vector3[] CatmullEdgePoints;
         public Vector3[] CatmullFacePoints;
+        public bool[] CatmullEdgeEdges;
+        public byte[] CatmullEdgeFaceCount;
         public CubeGridData griddata;
         public CatmullManager(CubeGridData grid)
         {
@@ -294,6 +299,8 @@ namespace TerrainEdit.DualContouring
             ExtraCatmullVerts = new int[griddata.CubeGrid.Edges.Length];
             CatmullEdgePoints= new Vector3[griddata.CubeGrid.Edges.Length];
             CatmullFacePoints = new Vector3[griddata.CubeGrid.Edges.Length];
+            CatmullEdgeEdges = new bool[griddata.CubeGrid.Edges.Length];
+            CatmullEdgeFaceCount = new byte[griddata.CubeGrid.Edges.Length];
         }
 
         public void CalculateExtraVerts(List<Vector3> verts)
@@ -306,10 +313,12 @@ namespace TerrainEdit.DualContouring
                 
                 if (edge.signChange)
                 {
+                    
                     var h = Vector3.zero;
                     int counter = 0;
-                    foreach(var i in e.cubes)
+                    for(int r = 0;r<e.cubes.Count;r++)
                     {
+                        var i = e.cubes[r];
                         
                         h += griddata.CubeData[i].VertexPoint;
                         counter++;
@@ -317,15 +326,58 @@ namespace TerrainEdit.DualContouring
                     if (counter == 0) continue;
                     h /= counter;
                     CatmullFacePoints[e.Index] = h;
+                    if (e.cubes.Count != 4) continue;
+                    for (int r = 0; r < 4; r++)
+                    {
+                        var i = e.cubes[r];
+                        switch(r){
+                            
+                            case 0:
+                                var newedge = MapCubesToEdge(i,e.cubes[1]);
+                                CatmullEdgeEdges[newedge.Index]=true;
+                                CatmullEdgePoints[newedge.Index]+=h;
+                                CatmullEdgeFaceCount[newedge.Index]++;
+                                break;
+                            case 1:
+                                newedge = MapCubesToEdge(i,e.cubes[3]);
+                                CatmullEdgeEdges[newedge.Index]=true;
+                                CatmullEdgePoints[newedge.Index]+=h;
+                                CatmullEdgeFaceCount[newedge.Index]++;
+                                break;
+                            case 2:
+                                newedge = MapCubesToEdge(e.cubes[0],i);
+                                CatmullEdgeEdges[newedge.Index]=true;
+                                CatmullEdgePoints[newedge.Index]+=h;
+                                CatmullEdgeFaceCount[newedge.Index]++;
+                                break;
+                            case 3:
+                                newedge = MapCubesToEdge(e.cubes[2],i);
+                                CatmullEdgeEdges[newedge.Index]=true;
+                                CatmullEdgePoints[newedge.Index]+=h;
+                                CatmullEdgeFaceCount[newedge.Index]++;
+                                break;
+                        }
+                    }
                 }
+                
             }
             Profiler.EndSample();
             Profiler.BeginSample("Edge points");
+            
             foreach (var edge in griddata.CubeGrid.Edges)
             {
-
+                if (!CatmullEdgeEdges[edge.Index]) continue;
                 if (IsCatmullEdge(edge))
                     {
+                        /*bool shouldcont = false;
+                        foreach (var c in edge.cubes)
+                        {
+                            if (griddata.CubeData[c].signChange)
+                            {
+                                shouldcont = true; break;
+                            }
+                        }
+                        if (!shouldcont) continue;*/
                         var q = Vector3.zero;
                         
                         var pointcoords = griddata.CubeGrid.GetPointCoords(edge.pointB);
@@ -335,27 +387,23 @@ namespace TerrainEdit.DualContouring
                         var cubea= griddata.CubeGrid.Cubes[griddata.CubeGrid.GetCubeIndex((int)pointcoords.x, (int)pointcoords.y, (int)pointcoords.z)];
                         var cubeadata = griddata.CubeData[cubea.Index];
                         var cubebdata = griddata.CubeData[cubeb.Index];
-                        if (!cubeadata.signChange || !cubebdata.signChange) continue;
+                        //r++;
+                        //if (!cubeadata.signChange || !cubebdata.signChange) continue;
+                        var num = CatmullEdgeFaceCount[edge.Index];
                         q += cubeadata.VertexPoint;
                         q += cubebdata.VertexPoint;
-                        int i = 2;
-
-                        int[] list = cubea.Edges.Where(x => cubeb.Edges.Contains(x) && griddata.EdgeData[x].signChange).ToArray();
-                        if (list.Length % 2 == 0)
-                        {
-                            foreach (var c in list)
-                            {
-
-                                 q += CatmullFacePoints[c];
-                                 i++;
-                            }
-                        }
                         
+                        int i = 2;
+                        if(num%2==0){
+                            i += num;
+                            q += CatmullEdgePoints[edge.Index];
+                        }
                         CatmullEdgePoints[edge.Index] = q/i;
                     }
                 
             }
             Profiler.EndSample();
+            
             Profiler.BeginSample("Move original verts");
             foreach (Cube cub in griddata.CubeGrid.Cubes)
             {

@@ -29,11 +29,11 @@ namespace TerrainEdit.DualContouring
             
             foreach (Edge edge in CubeGrid.Edges)
             {
-                EdgeData[edge.Index] = edge.CalculateInterpolationPoint(data);
+                edge.CalculateInterpolationPoint(data, ref EdgeData[edge.Index]);
             }
             foreach (Cube cube in CubeGrid.Cubes)
             {
-                CubeData[cube.Index] = cube.CalculateVertexPoint(ref EdgeData);
+                cube.CalculateVertexPoint(ref EdgeData,ref CubeData[cube.Index]);
             }
             Profiler.EndSample();
         }
