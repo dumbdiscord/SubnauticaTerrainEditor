@@ -47,15 +47,39 @@ namespace TerrainEdit.BatchTools{
         public NodeData GetDataAtPosition(Vector3 val)
         {
                 float mysize = 160;
-                if (!((val.x >= -mysize / 2f && val.x <= mysize / 2f) && (val.y >= -mysize / 2f && val.y <= mysize / 2f) && (val.z >= -mysize / 2f && val.z <= mysize / 2f))) return new NodeData(0, 0);
-
-                Vector3 Correctedval = (val + new Vector3(80, 80, 80)) / 32f;
-
-                var tree = Octrees[Mathf.FloorToInt(Correctedval.x >= 5 ? 4 : Correctedval.x) * 25 + Mathf.FloorToInt(Correctedval.y >= 5 ? 4 : Correctedval.y) * 5 + Mathf.FloorToInt(Correctedval.z >= 5 ? 4 : Correctedval.z)];
-                //Debug.Log(val - tree.Position+" "+val);
-                var h = val - tree.Position;
-                return tree.GetLeafNodeDataAt(new Vector3(h.z,h.y,h.x));
+                val -= Position;
+                if (!((val.x >= -mysize / 2f && val.x <= mysize / 2f) && (val.y >= -mysize / 2f && val.y <= mysize / 2f) && (val.z >= -mysize / 2f && val.z <= mysize / 2f))) { return new NodeData(0, 0); }
+            // - (Position)
+                Vector3 Correctedval = ((val+ new Vector3(80,80,80))) / 32f;
+                Correctedval=new Vector3(Math.Abs(Correctedval.x),Math.Abs(Correctedval.y),Math.Abs(Correctedval.z));
+                
+                try{
+                    var tree = Octrees[Mathf.FloorToInt((Correctedval.x) >= 5 ? 4 : Correctedval.x) * 25 + Mathf.FloorToInt(Correctedval.y >= 5 ? 4 : Correctedval.y) * 5 + Mathf.FloorToInt(Correctedval.z >= 5 ? 4 : Correctedval.z)];
+                    //Debug.Log(val - tree.Position+" "+val);
+                    var h = val - (tree.Position);
+                    return tree.GetLeafNodeDataAt(new Vector3(h.z, h.y, h.x));
+                }
+                catch
+                {
+                    throw new Exception(" " + Correctedval);
+                }
+                
             
+        }
+        public Octree GetOctreeAt(Vector3 val)
+        {
+            float mysize = 160;
+            val -= Position;
+            if (!((val.x >= -mysize / 2f && val.x <= mysize / 2f) && (val.y >= -mysize / 2f && val.y <= mysize / 2f) && (val.z >= -mysize / 2f && val.z <= mysize / 2f))) { return null; }
+            // - (Position)
+            Vector3 Correctedval = ((val + new Vector3(80, 80, 80))) / 32f;
+            Correctedval = new Vector3(Math.Abs(Correctedval.x), Math.Abs(Correctedval.y), Math.Abs(Correctedval.z));
+
+
+                return Octrees[Mathf.FloorToInt((Correctedval.x) >= 5 ? 4 : Correctedval.x) * 25 + Mathf.FloorToInt(Correctedval.y >= 5 ? 4 : Correctedval.y) * 5 + Mathf.FloorToInt(Correctedval.z >= 5 ? 4 : Correctedval.z)];
+                //Debug.Log(val - tree.Position+" "+val);
+               
+
         }
         
     }
@@ -70,14 +94,14 @@ namespace TerrainEdit.BatchTools{
         }
         public float GetDistanceValue(Vector3 val)
         {
-            var data = batch.GetDataAtPosition(val+offset);
+            var data = batch.GetDataAtPosition(val+offset-new Vector3(2,2,2));
             var h = (data.Distance - 126) / 126f;
 
             return  h;
         }
         public byte GetMaterialValue(Vector3 val)
         {
-            return batch.GetDataAtPosition(val + offset).Material;
+            return batch.GetDataAtPosition(val + offset - new Vector3(2, 2, 2)).Material;
         }
     }
 }

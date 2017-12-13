@@ -152,7 +152,8 @@ namespace TerrainEdit.DualContouring
             foreach (var edge in cube.Edges)
             {
                 var vec = cube.GetPointCoords(edge.pointA);
-                //if (vec.x > 0 && vec.y > 0 && vec.z > 0)// && vec.x < cube.xsize && vec.y < cube.ysize && vec.z < cube.zsize)
+                // && vec.x < cube.xsize-1 && vec.y < cube.ysize-1 && vec.z < cube.zsize-1
+                if ((vec.x > 1 && vec.y > 1 && vec.z > 1) && (vec.x < cube.xsize - 2 && vec.y < cube.ysize - 2 && vec.z < cube.zsize - 2))//if (vec.x > 0 && vec.y > 0 && vec.z > 0)// && vec.x < cube.xsize && vec.y < cube.ysize && vec.z < cube.zsize)
                     if (edge.signChange)
                     {
                         if (edge.cubes.Count != 4) continue;
@@ -178,10 +179,15 @@ namespace TerrainEdit.DualContouring
             now = DateTime.Now;
             foreach (var edge in cube.Edges)
             {
+
                 if (edge.signChange)
                 {
-                    if (edge.cubes.Count < 4) continue;
-                    AddCatmullMesh(edge);
+                    var vec = cube.GetPointCoords(edge.pointA);
+                    if ((vec.x > 1 && vec.y > 1 && vec.z >1) && (vec.x < cube.xsize - 2 && vec.y < cube.ysize - 2 && vec.z < cube.zsize - 2))
+                    {
+                        if (edge.cubes.Count < 4) continue;
+                        AddCatmullMesh(edge);
+                    }
                 }
             }
             //Debug.Log((DateTime.Now - now).TotalSeconds+" for Catmulling");
@@ -290,26 +296,30 @@ namespace TerrainEdit.DualContouring
                 if (IsCatmullEdge(edge))
                     {
                         var q = Vector3.zero;
-                        var pointcoords = grid.GetPointCoords(edge.pointA);
-                        var v = pointcoords;
+                        
+                        var pointcoords = grid.GetPointCoords(edge.pointB);
+                        var cubeb=grid.Cubes[grid.GetCubeIndex((int)pointcoords.x, (int)pointcoords.y, (int)pointcoords.z)];
+                        
+                        pointcoords = grid.GetPointCoords(edge.pointA);
                         var cubea= grid.Cubes[grid.GetCubeIndex((int)pointcoords.x, (int)pointcoords.y, (int)pointcoords.z)];
                         
-                        pointcoords = grid.GetPointCoords(edge.pointB);
-                        var cubeb=grid.Cubes[grid.GetCubeIndex((int)pointcoords.x, (int)pointcoords.y, (int)pointcoords.z)];
+
                         if (!cubea.signChange || !cubeb.signChange) continue;
                         q += cubea.VertexPoint;
                         q += cubeb.VertexPoint;
                         int i = 2;
-                        int[] list = cubea.Edges.Where(x => cubeb.Edges.Contains(x)&&grid.Edges[x].signChange).ToArray();
+
+                        int[] list = cubea.Edges.Where(x => cubeb.Edges.Contains(x) && grid.Edges[x].signChange&&IsRenderedEdge(grid.Edges[x])).ToArray();
                         if (list.Length % 2 == 0)
                         {
                             foreach (var c in list)
                             {
 
-                                q += grid.Edges[c].CatmullFacePoint;
-                                i++;
+                                 q += grid.Edges[c].CatmullFacePoint;
+                                 i++;
                             }
                         }
+                        
                         edge.CatmullEdgePoint = q/i;
                     }
                 
@@ -318,6 +328,7 @@ namespace TerrainEdit.DualContouring
             {
                 if (!c.signChange)
                     continue;
+                if (c.CurVertIndex == -1) continue;
                 var v = grid.GetCubeCoords(c.Index)-new Vector3(1,1,1)/2f;
                 int counter = 0;
                 int counter1 = 0;
@@ -353,16 +364,16 @@ namespace TerrainEdit.DualContouring
                             break;
                     }
                     var h = normvec + v;
-                    if (float.IsNaN(grid.Cubes[grid.GetCubeIndex((int)h.x, (int)h.y, (int)h.z)].VertexPoint.x)) continue;
-                    if (!grid.Cubes[grid.GetCubeIndex((int)h.x, (int)h.y, (int)h.z)].signChange)
+                    var newcube = grid.Cubes[grid.GetCubeIndex((int)h.x, (int)h.y, (int)h.z)];
+                    if (float.IsNaN(newcube.VertexPoint.x)) continue;
+                    if (!newcube.signChange)
                     {
                         continue;
                     }
-                    
                     counter1++;
                     
 
-                    edgepoints+=(grid.Cubes[grid.GetCubeIndex((int)h.x,(int)h.y,(int)h.z)].VertexPoint+c.VertexPoint)/2f;
+                    edgepoints+=(newcube.VertexPoint+c.VertexPoint)/2f;
                 }
                 
                 edgepoints/=counter1;
@@ -389,7 +400,7 @@ namespace TerrainEdit.DualContouring
                 }
                 else
                 {
-                    verts[c.CurVertIndex] = (c.VertexPoint + edgepoints) / 2f;
+                   verts[c.CurVertIndex] = (c.VertexPoint+edgepoints)/2f;
                 }
 
                     
@@ -426,11 +437,11 @@ namespace TerrainEdit.DualContouring
 
         public Edge MapCubesToEdge(Cube a, Cube b)
         {
-            if (grid.GetCubeCoords(a.Index).magnitude< grid.GetCubeCoords(b.Index).magnitude)
+            if (grid.GetCubeCoords(a.Index).magnitude> grid.GetCubeCoords(b.Index).magnitude)
             {
-                //var temp = a;
-                //a = b;
-                //b = temp;
+                var temp = a;
+                a = b;
+                b = temp;
             }
             var dir = GetEdgeDirection(a, b);
             switch (dir)
@@ -467,6 +478,13 @@ namespace TerrainEdit.DualContouring
             var a = grid.GetPointCoords(edge.pointA);
             var b = grid.GetPointCoords(edge.pointB);
             return a.x < grid.xsize - 1 && a.y < grid.ysize - 1 && a.z < grid.zsize - 1 && b.x < grid.xsize - 1 && b.y < grid.ysize - 1 && b.z < grid.zsize - 1;
+        }
+        public bool IsRenderedEdge(Edge edge)
+        {
+            return true;
+            var a = grid.GetPointCoords(edge.pointA);
+            var b = grid.GetPointCoords(edge.pointB);
+            return (a.x < grid.xsize - 1 && a.y < grid.ysize - 1 && a.z < grid.zsize - 1 && b.x < grid.xsize - 1 && b.y < grid.ysize - 1 && b.z < grid.zsize - 1) && (a.x > 1 && a.y > 1 && a.z >  1 && b.x >1 && b.y > 1 && b.z > 1);
         }
         public Edge.EdgeDirection GetEdgeDirection(Cube a, Cube b)
         {
