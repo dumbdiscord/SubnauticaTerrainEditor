@@ -14,6 +14,7 @@ namespace TerrainEdit.DualContouring
         List<Vector3> verts;
         List<int> tris;
         CatmullManager catmull;
+
         public GridMeshBuilder(int xsize, int ysize, int zsize, IDataProvider provider)
         {
             cubedata = new CubeGridData( new CubeGrid(xsize, ysize, zsize));
@@ -32,10 +33,13 @@ namespace TerrainEdit.DualContouring
         }
         public GridMeshBuilder(CubeGridData cube, IDataProvider data)
         {
+            Profiler.BeginSample("Populating Grid");
             verts = new List<Vector3>();
             tris = new List<int>();
+            
             this.cubedata = cube;
             cubedata.PopulateGrid(data);
+            Profiler.EndSample();
         }
         void AddMesh(Vector3 a1, Vector3 a2, Vector3 b1, Vector3 b2)
         {
@@ -157,6 +161,7 @@ namespace TerrainEdit.DualContouring
 
 
             }
+
             Profiler.EndSample();
         }
         public void CatmullClark()
@@ -278,7 +283,7 @@ namespace TerrainEdit.DualContouring
             //mesh.RecalculateNormals(cube);
             verts.Clear();
             tris.Clear();
-            cubedata = null;
+            //cubedata = null;
 
         }
     }

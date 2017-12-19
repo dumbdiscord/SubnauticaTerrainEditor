@@ -6,7 +6,7 @@ using System.IO;
 using System.Linq;
 namespace TerrainEdit.BatchTools
 {
-    public class Octree
+    public class Octree : IOctree
     {
         public static readonly Vector3[] ChildCenters = new Vector3[8]{
             new Vector3(-1,-1,-1)/4f,
@@ -23,6 +23,7 @@ namespace TerrainEdit.BatchTools
         public Octree ParentNode { get; protected set; }
         public NodeData Data { get; protected set; }
         public Octree[] Children{get; protected set;}
+        public bool IsEmpty { get; set; }
         public bool IsLeafNode{
             get{
                 return Children==null;
@@ -93,7 +94,7 @@ namespace TerrainEdit.BatchTools
             ParentNode=Parent;
         }
         public Octree() { }
-        protected static Octree CreateFromProtoData(ref ProtoOctreeNode[] Nodes, int Index)
+        protected static Octree CreateFromProtoData(ref ProtoOctreeNode[] Nodes, int Index, Octree rootnode)
         {
             var tree = new Octree();
             if (Nodes[Index].ChildIndex != 0)
@@ -103,21 +104,29 @@ namespace TerrainEdit.BatchTools
 
                 for (int i = 0; i < 8; i++)
                 {
-                    var child = Octree.CreateFromProtoData(ref Nodes,cindex+i);
+                    var child = Octree.CreateFromProtoData(ref Nodes,cindex+i,rootnode);
                     child.ParentNode = tree;
                     tree.Children[i] = child;
                 }
                 
             }
-            
-            tree.Data = Nodes[Index].Data;
+            else
+            {
+                var data = Nodes[Index].Data;
+                if (rootnode.IsEmpty && !(data.Material == 0 ? true : ((data.Distance - 126f) / 126f == -1f ? true : false)))
+                {
+                    rootnode.IsEmpty = false;
+                }
+                tree.Data = data;
+            }
+
             return tree;
         }
 
         public NodeData GetLeafNodeDataAt(Vector3 val)
         {
             if(IsLeafNode) return Data;
-            if (Data.Distance == 0) return Data;
+            //if (Data.Distance == 0) return Data;
             byte corneroffset = 0;
             if (val.z > 0)
             {
@@ -168,13 +177,18 @@ namespace TerrainEdit.BatchTools
         {
 
             Data = Nodes[0].Data;
-            if(Nodes.Length==1) return;
+            if (Nodes.Length == 1)
+            {
+                IsEmpty = true;
+                return;
+            }
+            
             var cindex = Nodes[0].ChildIndex;
             Children = new Octree[8];
 
             for (int i = 0; i < 8; i++)
             {
-                var child = Octree.CreateFromProtoData(ref Nodes, cindex + i);
+                var child = Octree.CreateFromProtoData(ref Nodes, cindex + i,this);
                 child.SetParent(this);
                 Children[i] = child;
             }
@@ -204,7 +218,7 @@ namespace TerrainEdit.BatchTools
             write.Write(ChildIndex);
         }
     }
-    public struct NodeData
+    public class NodeData
     {
         public byte Distance{get; private set;}
         public byte Material{get; private set;}
@@ -213,5 +227,11 @@ namespace TerrainEdit.BatchTools
             this.Distance = Distance;
             this.Material = Material;
         }
+    }
+    public interface IOctree
+    {
+        bool IsEmpty { get; }
+        NodeData GetLeafNodeDataAt(Vector3 pos);
+        Vector3 Position { get; }
     }
 }

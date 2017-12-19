@@ -7,8 +7,9 @@ using TerrainEdit.DualContouring;
 namespace TerrainEdit.BatchTools{
     public class Batch {
         public int Version;
-        public Octree[] Octrees;
+        public IOctree[] Octrees;
         public Vector3 Position;
+        public bool amempty = true;
         public static Batch Deserialize(BinaryReader reader,Vector3 Position)
         {
             var now = DateTime.Now;
@@ -31,11 +32,12 @@ namespace TerrainEdit.BatchTools{
                             nodes[i] = ProtoOctreeNode.Deserialize(reader);
                         }
                         octree.InitFromProtoData(ref nodes);
-                         
+                        if (!octree.IsEmpty) batch.amempty = false;
                         batch.Octrees[x*25  + y * 5 + z] = octree;
                     }
                 }
             }
+            if (batch.amempty) batch.Octrees = null;
             //Debug.Log((DateTime.Now - now).TotalSeconds+" to deserialize batch");
             return batch;
         }
@@ -43,20 +45,24 @@ namespace TerrainEdit.BatchTools{
         {
             return new BatchDataProvider(this,offset);
         }
-
+        public static Batch CreateEmpty()
+        {
+            return new Batch() {amempty=true };
+        }
         public NodeData GetDataAtPosition(Vector3 val)
         {
+                if (amempty) return new NodeData(0, 0);   
                 float mysize = 160;
                 val -= Position;
                 if (!((val.x >= -mysize / 2f && val.x <= mysize / 2f) && (val.y >= -mysize / 2f && val.y <= mysize / 2f) && (val.z >= -mysize / 2f && val.z <= mysize / 2f))) { return new NodeData(0, 0); }
-            // - (Position)
+                
                 Vector3 Correctedval = ((val+ new Vector3(80,80,80))) / 32f;
                 Correctedval=new Vector3(Math.Abs(Correctedval.x),Math.Abs(Correctedval.y),Math.Abs(Correctedval.z));
                 
                 try{
                     var tree = Octrees[Mathf.FloorToInt((Correctedval.x) >= 5 ? 4 : Correctedval.x) * 25 + Mathf.FloorToInt(Correctedval.y >= 5 ? 4 : Correctedval.y) * 5 + Mathf.FloorToInt(Correctedval.z >= 5 ? 4 : Correctedval.z)];
                     //Debug.Log(val - tree.Position+" "+val);
-                    var h = val - (tree.Position);
+                    var h = val - ((tree).Position);
                     return tree.GetLeafNodeDataAt(new Vector3(h.z, h.y, h.x));
                 }
                 catch
@@ -66,7 +72,7 @@ namespace TerrainEdit.BatchTools{
                 
             
         }
-        public Octree GetOctreeAt(Vector3 val)
+        public IOctree GetOctreeAt(Vector3 val)
         {
             float mysize = 160;
             val -= Position;
@@ -76,7 +82,7 @@ namespace TerrainEdit.BatchTools{
             Correctedval = new Vector3(Math.Abs(Correctedval.x), Math.Abs(Correctedval.y), Math.Abs(Correctedval.z));
 
 
-                return Octrees[Mathf.FloorToInt((Correctedval.x) >= 5 ? 4 : Correctedval.x) * 25 + Mathf.FloorToInt(Correctedval.y >= 5 ? 4 : Correctedval.y) * 5 + Mathf.FloorToInt(Correctedval.z >= 5 ? 4 : Correctedval.z)];
+            return Octrees[Mathf.FloorToInt((Correctedval.x) >= 5 ? 4 : Correctedval.x) * 25 + Mathf.FloorToInt(Correctedval.y >= 5 ? 4 : Correctedval.y) * 5 + Mathf.FloorToInt(Correctedval.z >= 5 ? 4 : Correctedval.z)];
                 //Debug.Log(val - tree.Position+" "+val);
                
 

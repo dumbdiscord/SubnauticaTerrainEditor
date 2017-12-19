@@ -12,6 +12,7 @@ namespace TerrainEdit.DualContouring
         public int xsize;
         public int ysize;
         public int zsize;
+        public const float Scale = 4f;
         public int GetCubeIndex(int x, int y, int z)
         {
             if (x >= xsize - 1 || y >= ysize - 1 || z >= zsize - 1)
@@ -255,8 +256,8 @@ namespace TerrainEdit.DualContouring
         {
             
             float t = 0f;
-            var pointa = cube.GetPointCoords(pointA);
-            var pointb = cube.GetPointCoords(pointB);
+            var pointa = cube.GetPointCoords(pointA) * CubeGrid.Scale;
+            var pointb = cube.GetPointCoords(pointB) * CubeGrid.Scale;
             float b = data.GetDistanceValue(pointb);
             float a = data.GetDistanceValue(pointa);
 
