@@ -10,13 +10,15 @@ namespace TerrainEdit.BatchTools{
         public IOctree[] Octrees;
         public Vector3 Position;
         public bool amempty = true;
+        public string name;
+        public bool IsLoaded;
         public static Batch Deserialize(BinaryReader reader,Vector3 Position)
         {
             var now = DateTime.Now;
             var batch = new Batch();
             batch.Position = Position;
             batch.Version = reader.ReadInt32();
-            batch.Octrees= new Octree[125];
+            batch.Octrees= new IOctree[125];
             Vector3 Offset = new Vector3(1, 1, 1) * -64f;
             for (int x = 0; x < 5; x++)
             {
@@ -24,20 +26,25 @@ namespace TerrainEdit.BatchTools{
                 {
                     for (int z = 0; z < 5; z++)
                     {
-                        var octree = new RootNode(new Vector3(x * 32,  y * 32, z * 32) + Offset, 32);
+                        var octree = new CompactOctree();//new RootNode(new Vector3(x * 32,  y * 32, z * 32) + Offset, 32);
                         int count = reader.ReadUInt16();
-                        ProtoOctreeNode[] nodes = new ProtoOctreeNode[count];
+                        octree.Nodes = new ProtoOctreeNode[count];
                         for (int i = 0; i < count; i++)
                         {
-                            nodes[i] = ProtoOctreeNode.Deserialize(reader);
+                            octree.Nodes[i] = ProtoOctreeNode.Deserialize(reader);
                         }
-                        octree.InitFromProtoData(ref nodes);
+                        
+                        octree.Position = new Vector3(x * 32, y * 32, z * 32) + Offset;
+                        octree.SetIfEmpty();
                         if (!octree.IsEmpty) batch.amempty = false;
-                        batch.Octrees[x*25  + y * 5 + z] = octree;
+                        batch.Octrees[x*25  + y * 5 + z] = octree as IOctree;
                     }
                 }
             }
+            
             if (batch.amempty) batch.Octrees = null;
+            //batch.amempty = true;
+            batch.IsLoaded = true;
             //Debug.Log((DateTime.Now - now).TotalSeconds+" to deserialize batch");
             return batch;
         }

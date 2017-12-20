@@ -39,10 +39,12 @@ namespace TerrainEdit.BatchTools
                 int x = Mathf.FloorToInt(Mathf.Abs(pos2.x));
                 int y = Mathf.FloorToInt(Mathf.Abs(pos2.y));
                 int z = Mathf.FloorToInt(Mathf.Abs(pos2.z));
+                var name = "Batch " + (x + 1) + "-" + (y + 1) + "-" + (z + 1);
                 try
                 {
                     UnityEngine.Profiling.Profiler.BeginSample("Deserializing Them Batches");
                     Batches[index] = BatchSerializer.ReadBatch(BatchSerializer.GetBatchPath(BatchPath, x + 1, y + 1, z + 1), GetBatchCenter(x, y, z));
+                    Batches[index].name = name;
                     UnityEngine.Profiling.Profiler.EndSample();
                 }
                 catch(Exception e)
@@ -50,6 +52,7 @@ namespace TerrainEdit.BatchTools
                     //Debug
                     //Debug.Log(e);
                     Batches[index] = Batch.CreateEmpty();
+                    Batches[index].name = name;
                 }
             }
             return Batches[index].GetDataAtPosition(pos);

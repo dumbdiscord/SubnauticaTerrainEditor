@@ -218,7 +218,7 @@ namespace TerrainEdit.BatchTools
             write.Write(ChildIndex);
         }
     }
-    public class NodeData
+    public struct NodeData
     {
         public byte Distance{get; private set;}
         public byte Material{get; private set;}
@@ -226,6 +226,10 @@ namespace TerrainEdit.BatchTools
         {
             this.Distance = Distance;
             this.Material = Material;
+        }
+        public bool ShouldBeEmpty()
+        {
+            return (Material == 0 ? true : ((Distance==0) ? true : false));
         }
     }
     public interface IOctree
