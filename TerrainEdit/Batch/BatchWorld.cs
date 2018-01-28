@@ -30,6 +30,51 @@ namespace TerrainEdit.BatchTools
         {
             return new Vector3(x * 160, y * 160, z * 160) + WorldCorner + new Vector3(80, 80, 80);
         }
+        public Int3 GetBatchPos(Vector3 a)
+        {
+            return (Int3)(((a - WorldCorner)) / 160f);
+        }
+        public int GetBatchIndex(Int3 pos)
+        {
+            return pos.X * ysize * zsize + pos.Y * zsize + pos.Z;
+        }
+        public bool IsInsideTheWorld(Int3 pos)
+        {
+            return IsInsideTheWorld(((Vector3)pos * 160) + WorldCorner);
+        }
+        public bool IsInsideTheWorld(Vector3 pos)
+        {
+            return ((pos.x < WorldCorner.x || pos.x > WorldCorner.x + xsize * 160) || (pos.y < WorldCorner.y || pos.y > WorldCorner.y + ysize * 160) || (pos.z < WorldCorner.z || pos.z > WorldCorner.z + zsize * 160));
+        }
+        public Batch GetOrCreateBatch(Int3 pos)
+        {
+            int index =GetBatchIndex(pos);
+            if (Batches[index] == null)
+            {
+                Batches[index] = Batch.CreateEmpty(this, GetBatchCenter(pos.X, pos.Y, pos.Z));
+            }
+            return Batches[index];
+        }
+        static Int3[] neighbors = new Int3[] { 
+            new Int3(1,0,0),
+            new Int3(0,1,0),
+            new Int3(0,0,1),
+            new Int3(1,1,0),
+            new Int3(0,1,1),
+            new Int3(1,1,1)
+        };
+        public List<Batch> GetOrCreateNeighbors(Batch batch)
+        {
+            var neigh = new List<Batch>();
+            for (int i = 0; i < 6; i++)
+            {
+                if (IsInsideTheWorld(batch.intPos + neighbors[i]))
+                {
+                    neigh.Add(GetOrCreateBatch(batch.intPos + neighbors[i]));
+                }
+            }
+            return neigh;
+        }
         public NodeData GetDataAtPos(Vector3 pos)
         {
             int index = GetBatchIndexFromPos(pos);
@@ -42,16 +87,17 @@ namespace TerrainEdit.BatchTools
                 var name = "Batch " + (x + 1) + "-" + (y + 1) + "-" + (z + 1);
                 try
                 {
-                    UnityEngine.Profiling.Profiler.BeginSample("Deserializing Them Batches");
-                    Batches[index] = BatchSerializer.ReadBatch(BatchSerializer.GetBatchPath(BatchPath, x + 1, y + 1, z + 1), GetBatchCenter(x, y, z));
+                    //UnityEngine.Profiling.Profiler.BeginSample("Deserializing Them Batches");
+                    Batches[index] = BatchSerializer.ReadBatch(BatchSerializer.GetBatchPath(BatchPath, x + 1, y + 1, z + 1), GetBatchCenter(x, y, z),this);
+                    //Debug.Log("H");
                     Batches[index].name = name;
-                    UnityEngine.Profiling.Profiler.EndSample();
+                    //UnityEngine.Profiling.Profiler.EndSample();
                 }
                 catch(Exception e)
                 {
                     //Debug
                     //Debug.Log(e);
-                    Batches[index] = Batch.CreateEmpty();
+                    Batches[index] = Batch.CreateEmpty(this, pos);
                     Batches[index].name = name;
                 }
             }

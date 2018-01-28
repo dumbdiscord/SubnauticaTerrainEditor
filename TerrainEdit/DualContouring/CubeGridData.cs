@@ -23,7 +23,7 @@ namespace TerrainEdit.DualContouring
         }
         public void PopulateGrid(IDataProvider data)
         {
-            Profiler.BeginSample("Grid Population");
+            //Profiler.BeginSample("Grid Population");
             Reset();
             
             
@@ -35,7 +35,7 @@ namespace TerrainEdit.DualContouring
             {
                 cube.CalculateVertexPoint(ref EdgeData,ref CubeData[cube.Index]);
             }
-            Profiler.EndSample();
+            //Profiler.EndSample();
         }
         
     }

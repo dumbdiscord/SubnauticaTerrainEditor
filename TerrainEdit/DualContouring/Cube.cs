@@ -12,7 +12,7 @@ namespace TerrainEdit.DualContouring
         public int xsize;
         public int ysize;
         public int zsize;
-        public const float Scale = 4f;
+        public const float Scale = 1f;
         public int GetCubeIndex(int x, int y, int z)
         {
             if (x >= xsize - 1 || y >= ysize - 1 || z >= zsize - 1)

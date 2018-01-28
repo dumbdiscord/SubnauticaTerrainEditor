@@ -33,13 +33,13 @@ namespace TerrainEdit.DualContouring
         }
         public GridMeshBuilder(CubeGridData cube, IDataProvider data)
         {
-            Profiler.BeginSample("Populating Grid");
+            //Profiler.BeginSample("Populating Grid");
             verts = new List<Vector3>();
             tris = new List<int>();
             
             this.cubedata = cube;
             cubedata.PopulateGrid(data);
-            Profiler.EndSample();
+           // Profiler.EndSample();
         }
         void AddMesh(Vector3 a1, Vector3 a2, Vector3 b1, Vector3 b2)
         {
@@ -136,7 +136,7 @@ namespace TerrainEdit.DualContouring
             verts.Clear();
             tris.Clear();
             var cube = cubedata.CubeGrid;
-            Profiler.BeginSample("Dual Contour Quad Calculation");
+            //Profiler.BeginSample("Dual Contour Quad Calculation");
             foreach (var edges in cube.Edges)
             {
                 var edge = cubedata.EdgeData[edges.Index];
@@ -162,7 +162,7 @@ namespace TerrainEdit.DualContouring
 
             }
 
-            Profiler.EndSample();
+            //Profiler.EndSample();
         }
         public void CatmullClark()
         {
@@ -173,7 +173,7 @@ namespace TerrainEdit.DualContouring
             verts.Clear();
             tris.Clear();
             var cube = cubedata.CubeGrid;
-            Profiler.BeginSample("Catmull Stage A");
+            //Profiler.BeginSample("Catmull Stage A");
             foreach (var edges in cubedata.CubeGrid.Edges)
             {
                 var vec = cube.GetPointCoords(edges.pointA);
@@ -199,11 +199,11 @@ namespace TerrainEdit.DualContouring
 
 
             }
-            Profiler.EndSample();
+            //Profiler.EndSample();
             //Debug.Log((DateTime.Now - now).TotalSeconds+" for making fake verts");
             catmull.Init();
             catmull.CalculateExtraVerts(verts);
-            Profiler.BeginSample("Catmull Clark B");
+            //Profiler.BeginSample("Catmull Clark B");
             now = DateTime.Now;
             foreach (var edges in cubedata.CubeGrid.Edges)
             {
@@ -219,7 +219,7 @@ namespace TerrainEdit.DualContouring
                     }
                 }
             }
-            Profiler.EndSample();
+            //Profiler.EndSample();
             //Debug.Log((DateTime.Now - now).TotalSeconds+" for Catmulling");
         }
         void AddCatmullMesh(Edge centeredge)
@@ -311,7 +311,7 @@ namespace TerrainEdit.DualContouring
         public void CalculateExtraVerts(List<Vector3> verts)
         {
             var now = DateTime.Now;
-            Profiler.BeginSample("FacePoints");
+            //Profiler.BeginSample("FacePoints");
             foreach (var e in griddata.CubeGrid.Edges)
             {
                 var edge = griddata.EdgeData[e.Index];
@@ -366,8 +366,8 @@ namespace TerrainEdit.DualContouring
                 }
                 
             }
-            Profiler.EndSample();
-            Profiler.BeginSample("Edge points");
+            //Profiler.EndSample();
+            //Profiler.BeginSample("Edge points");
             
             foreach (var edge in griddata.CubeGrid.Edges)
             {
@@ -407,9 +407,9 @@ namespace TerrainEdit.DualContouring
                     }
                 
             }
-            Profiler.EndSample();
+            //Profiler.EndSample();
             
-            Profiler.BeginSample("Move original verts");
+            //Profiler.BeginSample("Move original verts");
             foreach (Cube cub in griddata.CubeGrid.Cubes)
             {
                 var c = griddata.CubeData[cub.Index];
@@ -493,7 +493,7 @@ namespace TerrainEdit.DualContouring
                     
                 //}
             }
-            Profiler.EndSample();
+            //Profiler.EndSample();
             //Debug.Log((DateTime.Now - now).TotalSeconds+" for setting all the values");
         }
         public void ResolveCatmullEdges(Edge edge,List<Vector3> verts){

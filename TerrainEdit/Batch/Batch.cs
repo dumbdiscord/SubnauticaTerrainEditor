@@ -12,13 +12,23 @@ namespace TerrainEdit.BatchTools{
         public bool amempty = true;
         public string name;
         public bool IsLoaded;
-        public static Batch Deserialize(BinaryReader reader,Vector3 Position)
+        public bool IsLoading;
+        public BatchWorld world;
+        public Int3 intPos;
+        public Batch(BatchWorld world, Vector3 pos)
+        {
+            this.world = world;
+            this.Position = pos;
+            this.intPos = world.GetBatchPos(pos);
+        }
+        public static Batch Deserialize(BinaryReader reader,Vector3 Position, BatchWorld world)
         {
             var now = DateTime.Now;
-            var batch = new Batch();
-            batch.Position = Position;
+            var batch = new Batch(world,Position);
+            //Debug.Log("Loading "+world.GetBatchPos(Position));
             batch.Version = reader.ReadInt32();
             batch.Octrees= new IOctree[125];
+            Debug.Log(batch.Octrees==null);
             Vector3 Offset = new Vector3(1, 1, 1) * -64f;
             for (int x = 0; x < 5; x++)
             {
@@ -52,10 +62,11 @@ namespace TerrainEdit.BatchTools{
         {
             return new BatchDataProvider(this,offset);
         }
-        public static Batch CreateEmpty()
+        public static Batch CreateEmpty(BatchWorld world, Vector3 position)
         {
-            return new Batch() {amempty=true };
+            return new Batch(world,position) {amempty=true };
         }
+
         public NodeData GetDataAtPosition(Vector3 val)
         {
                 if (amempty) return new NodeData(0, 0);   
@@ -87,8 +98,9 @@ namespace TerrainEdit.BatchTools{
             // - (Position)
             Vector3 Correctedval = ((val + new Vector3(80, 80, 80))) / 32f;
             Correctedval = new Vector3(Math.Abs(Correctedval.x), Math.Abs(Correctedval.y), Math.Abs(Correctedval.z));
-
-
+            if (amempty) return null;
+            //Debug.Log(Mathf.FloorToInt((Correctedval.x) >= 5 ? 4 : Correctedval.x) * 25 + Mathf.FloorToInt(Correctedval.y >= 5 ? 4 : Correctedval.y) * 5 + Mathf.FloorToInt(Correctedval.z >= 5 ? 4 : Correctedval.z));
+            //  Debug.Log(name);
             return Octrees[Mathf.FloorToInt((Correctedval.x) >= 5 ? 4 : Correctedval.x) * 25 + Mathf.FloorToInt(Correctedval.y >= 5 ? 4 : Correctedval.y) * 5 + Mathf.FloorToInt(Correctedval.z >= 5 ? 4 : Correctedval.z)];
                 //Debug.Log(val - tree.Position+" "+val);
                
